@@ -63,7 +63,7 @@ jobs:
 
       - name: Conftest (OPA) - HCL2
         run: |
-          docker run --rm             -v "$PWD":/repo             -w /repo             openpolicyagent/conftest:v0.56.0             test --parser hcl2 -p policies/opa .
+          docker run --rm             -v "$PWD":/repo             -w /repo             openpolicyagent/conftest:v0.56.0             test --parser hcl2 -p policies/opa stacks modules
 
   docs:
     runs-on: ubuntu-latest
