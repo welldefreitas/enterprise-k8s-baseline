@@ -56,19 +56,13 @@ variable "enable_private_endpoint" {
 }
 
 variable "allowed_admin_cidrs" {
-  description = "CIDRs allowlisted for Kubernetes control plane access (Master Authorized Networks). Provide at least one CIDR."
+  description = "CIDRs allowlisted for control plane access when public endpoint is enabled."
   type        = list(string)
+  default     = []
 
   validation {
-    condition     = length(var.allowed_admin_cidrs) > 0
-    error_message = "allowed_admin_cidrs must contain at least one CIDR (e.g., 203.0.113.10/32 or your VPN/bastion CIDR)."
-  }
-
-  validation {
-    condition = alltrue([
-      for c in var.allowed_admin_cidrs : can(cidrnetmask(c))
-    ])
-    error_message = "allowed_admin_cidrs must be valid CIDR blocks (e.g., 203.0.113.10/32)."
+    condition     = var.enable_private_endpoint || length(var.allowed_admin_cidrs) > 0
+    error_message = "Security guardrail: when enable_private_endpoint=false (public control plane), you must set allowed_admin_cidrs."
   }
 }
 

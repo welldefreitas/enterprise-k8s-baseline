@@ -1,17 +1,10 @@
-# Keep labels as part of the module interface contract (even though core VPC resources do not support labels).
-resource "terraform_data" "labels" {
-  input = var.labels
-}
-
 resource "google_compute_network" "this" {
-  project                 = var.project_id
   name                    = var.network_name
   auto_create_subnetworks = false
   routing_mode            = "REGIONAL"
 }
 
 resource "google_compute_subnetwork" "this" {
-  project       = var.project_id
   name          = var.subnet_name
   ip_cidr_range = var.subnet_cidr
   region        = var.region
@@ -32,7 +25,6 @@ resource "google_compute_subnetwork" "this" {
 
 # Minimal internal allow (tighten further as your platform matures)
 resource "google_compute_firewall" "allow_internal" {
-  project = var.project_id
   name    = "${var.network_name}-allow-internal"
   network = google_compute_network.this.name
 
@@ -55,7 +47,6 @@ resource "google_compute_firewall" "allow_internal" {
 }
 
 resource "google_compute_router" "this" {
-  project = var.project_id
   count   = var.enable_cloud_nat ? 1 : 0
   name    = "${var.network_name}-router"
   region  = var.region
@@ -63,7 +54,6 @@ resource "google_compute_router" "this" {
 }
 
 resource "google_compute_router_nat" "this" {
-  project = var.project_id
   count  = var.enable_cloud_nat ? 1 : 0
   name   = "${var.network_name}-nat"
   router = google_compute_router.this[0].name
