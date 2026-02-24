@@ -56,9 +56,10 @@ variable "enable_private_endpoint" {
 }
 
 variable "allowed_admin_cidrs" {
-  description = "CIDRs allowlisted for Kubernetes control plane access (Master Authorized Networks). Provide at least one CIDR."
+  description = "CIDRs allowlisted for Kubernetes control plane access (Master Authorized Networks)."
   type        = list(string)
 
+  # Audit-grade guardrail: always require at least one CIDR allowlisted.
   validation {
     condition     = length(var.allowed_admin_cidrs) > 0
     error_message = "allowed_admin_cidrs must contain at least one CIDR (e.g., 203.0.113.10/32 or your VPN/bastion CIDR)."
@@ -71,6 +72,7 @@ variable "allowed_admin_cidrs" {
     error_message = "allowed_admin_cidrs must be valid CIDR blocks (e.g., 203.0.113.10/32)."
   }
 }
+
 
 variable "enable_workload_identity" {
   description = "Enable Workload Identity."

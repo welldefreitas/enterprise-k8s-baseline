@@ -1,4 +1,10 @@
+# Keep labels as part of the module interface contract (even if SAs don't support labels).
+resource "terraform_data" "labels" {
+  input = var.labels
+}
+
 resource "google_service_account" "nodes" {
+  project      = var.project_id
   account_id   = substr(replace(var.name, "_", "-"), 0, 28)
   display_name = "GKE node SA (${var.name})"
 }

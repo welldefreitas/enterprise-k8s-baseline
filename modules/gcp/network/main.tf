@@ -1,17 +1,17 @@
-# Keep labels as part of the module interface contract (even though core VPC resources do not support labels).
+# Keep labels as part of the module interface contract (even if core VPC resources don't support them).
 resource "terraform_data" "labels" {
   input = var.labels
 }
 
 resource "google_compute_network" "this" {
-  project                 = var.project_id
+  project = var.project_id
   name                    = var.network_name
   auto_create_subnetworks = false
   routing_mode            = "REGIONAL"
 }
 
 resource "google_compute_subnetwork" "this" {
-  project       = var.project_id
+  project = var.project_id
   name          = var.subnet_name
   ip_cidr_range = var.subnet_cidr
   region        = var.region
