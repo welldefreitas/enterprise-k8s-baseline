@@ -1,6 +1,6 @@
 # 🏗️ Enterprise-grade Terraform Baseline for Kubernetes (GKE/EKS)
 
-[![CI](https://github.com/YOUR_GITHUB_OWNER/enterprise-k8s-baseline/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_GITHUB_OWNER/enterprise-k8s-baseline/actions/workflows/ci.yml)
+[![CI](https://github.com/welldefreitas/enterprise-k8s-baseline/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_GITHUB_OWNER/enterprise-k8s-baseline/actions/workflows/ci.yml)
 [![Terraform](https://img.shields.io/badge/Terraform-%3E%3D_1.6.0-623CE4?logo=terraform)](https://www.terraform.io/)
 [![Google Cloud](https://img.shields.io/badge/Google_Cloud-GKE-4285F4?logo=google-cloud)](https://cloud.google.com/)
 [![AWS](https://img.shields.io/badge/AWS-EKS_(WIP)-232F3E?logo=amazon-aws)](https://aws.amazon.com/)
