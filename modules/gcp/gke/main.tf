@@ -1,3 +1,18 @@
+# Guardrails that can reference multiple inputs (variable validations cannot).
+resource "terraform_data" "guardrails" {
+  input = {
+    enable_private_endpoint = var.enable_private_endpoint
+    allowed_admin_cidrs     = var.allowed_admin_cidrs
+  }
+
+  lifecycle {
+    precondition {
+      condition     = length(var.allowed_admin_cidrs) > 0
+      error_message = "Security guardrail: allowed_admin_cidrs must be set (provide your VPN/bastion/corp egress CIDR)."
+    }
+  }
+}
+
 resource "google_container_cluster" "this" {
   name     = var.cluster_name
   location = var.region
@@ -31,18 +46,17 @@ resource "google_container_cluster" "this" {
       issue_client_certificate = false
     }
   }
-
-  # When private endpoint is enabled, manage the cluster from inside the VPC (VPN/bastion).
-  # When public endpoint is enabled, restrict it using Master Authorized Networks.
-  dynamic "master_authorized_networks_config" {
-    for_each = var.enable_private_endpoint ? [] : [1]
-    content {
-      dynamic "cidr_blocks" {
-        for_each = var.allowed_admin_cidrs
-        content {
-          cidr_block   = cidr_blocks.value
-          display_name = "admin"
-        }
+  # Restrict control plane access using Master Authorized Networks.
+  # Note: kept as a static block (with dynamic cidr_blocks) so static scanners (e.g., Trivy) can detect it.
+  master_authorized_networks_config {
+    dynamic "cidr_blocks" {
+      for_each = var.allowed_admin_cidrs
+      content {
+        cidr_block   = cidr_blocks.value
+        display_name = "admin"
+      }
+    }
+  }
       }
     }
   }
