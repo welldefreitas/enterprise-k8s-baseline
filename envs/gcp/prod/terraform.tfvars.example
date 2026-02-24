@@ -1,0 +1,27 @@
+project_id = "my-gcp-project"
+region     = "us-central1"
+
+cluster_name = "gke-baseline-prod"
+network_name = "gke-baseline"
+
+subnet_cidr         = "10.110.0.0/16"
+pods_secondary_cidr = "10.120.0.0/16"
+svcs_secondary_cidr = "10.130.0.0/20"
+
+allowed_admin_cidrs = ["203.0.113.10/32"]
+
+private_nodes            = true
+enable_private_endpoint  = false
+enable_workload_identity = true
+
+deletion_protection = true
+
+node_count   = 3
+machine_type = "e2-standard-4"
+
+enable_artifact_registry_reader = true
+
+labels = {
+  env = "prod"
+  owner = "platform"
+}

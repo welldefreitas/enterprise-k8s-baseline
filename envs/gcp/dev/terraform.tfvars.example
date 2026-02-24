@@ -1,0 +1,29 @@
+project_id = "my-gcp-project"
+region     = "us-central1"
+
+cluster_name = "gke-baseline-dev"
+network_name = "gke-baseline"
+
+subnet_cidr         = "10.10.0.0/16"
+pods_secondary_cidr = "10.20.0.0/16"
+svcs_secondary_cidr = "10.30.0.0/20"
+
+# If enable_private_endpoint=false (default), restrict control plane access:
+allowed_admin_cidrs = ["203.0.113.10/32"]
+
+# Security posture knobs
+private_nodes            = true
+enable_private_endpoint  = false
+enable_workload_identity = true
+
+# Node pool
+node_count   = 2
+machine_type = "e2-standard-2"
+
+# Optional: allow nodes to pull images from Artifact Registry
+enable_artifact_registry_reader = true
+
+labels = {
+  env = "dev"
+  owner = "platform"
+}

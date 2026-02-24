@@ -1,0 +1,56 @@
+name: Plan (GCP via OIDC) - Manual
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: "Environment (dev|prod)"
+        required: true
+        default: "dev"
+      stack:
+        description: "Stack directory"
+        required: true
+        default: "stacks/gcp-gke"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # Skip safely if OIDC is not configured yet.
+    if: ${{ vars.GCP_WIF_PROVIDER != '' && vars.GCP_TF_PLAN_SA != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP (OIDC)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_TF_PLAN_SA }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.5"
+
+      - name: Terraform init (remote state)
+        run: |
+          terraform -chdir=${{ inputs.stack }} init -reconfigure             -backend-config=../../envs/gcp/${{ inputs.env }}/backend.hcl
+
+      - name: Terraform plan
+        run: |
+          terraform -chdir=${{ inputs.stack }} plan -input=false             -var-file=../../envs/gcp/${{ inputs.env }}/terraform.tfvars
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## ✅ Terraform Plan (GCP)"
+            echo ""
+            echo "- env: **${{ inputs.env }}**"
+            echo "- stack: **${{ inputs.stack }}**"
+            echo ""
+            echo "OIDC SA: **${{ vars.GCP_TF_PLAN_SA }}**"
+          } >> "$GITHUB_STEP_SUMMARY"

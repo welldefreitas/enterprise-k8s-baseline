@@ -1,0 +1,153 @@
+name: Apply (GCP via OIDC) - Plan then Apply (Manual Approval)
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: "Environment (dev|prod)"
+        required: true
+        default: "dev"
+      stack:
+        description: "Stack directory"
+        required: true
+        default: "stacks/gcp-gke"
+      refresh:
+        description: "Refresh remote state before planning"
+        required: true
+        default: "true"
+      approve_note:
+        description: "Optional: approval note / change ticket reference"
+        required: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: tf-apply-gcp-${{ inputs.env }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Plan (read-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: ${{ vars.GCP_WIF_PROVIDER != '' && vars.GCP_TF_PLAN_SA != '' }}
+    outputs:
+      has_changes: ${{ steps.plan.outputs.has_changes }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP (OIDC) - PLAN SA
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_TF_PLAN_SA }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.5"
+
+      - name: Terraform init (remote state)
+        run: |
+          terraform -chdir=${{ inputs.stack }} init -reconfigure \
+            -backend-config=../../envs/gcp/${{ inputs.env }}/backend.hcl
+
+      - name: Terraform plan (save)
+        id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          REFRESH_FLAG="-refresh=${{ inputs.refresh }}"
+          set +e
+          terraform -chdir=${{ inputs.stack }} plan \
+            -input=false \
+            ${REFRESH_FLAG} \
+            -var-file=../../envs/gcp/${{ inputs.env }}/terraform.tfvars \
+            -detailed-exitcode \
+            -out=../../reports/tfplan
+          rc=$?
+          set -e
+          if [ $rc -eq 2 ]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          elif [ $rc -eq 0 ]; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            exit $rc
+          fi
+
+          terraform -chdir=${{ inputs.stack }} show -no-color ../../reports/tfplan > reports/tfplan.txt
+          terraform -chdir=${{ inputs.stack }} show -json ../../reports/tfplan > reports/tfplan.json
+
+      - name: Upload plan artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ inputs.env }}
+          path: reports/
+          if-no-files-found: error
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## 🧾 Terraform Plan (GCP)"
+            echo ""
+            echo "- env: **${{ inputs.env }}**"
+            echo "- stack: **${{ inputs.stack }}**"
+            echo "- refresh: **${{ inputs.refresh }}**"
+            echo "- has_changes: **${{ steps.plan.outputs.has_changes }}**"
+            echo ""
+            echo "Plan artifacts: **tfplan-${{ inputs.env }}** (`tfplan.txt`, `tfplan.json`)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  apply:
+    name: Apply (manual approval)
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    if: ${{ needs.plan.outputs.has_changes == 'true' && vars.GCP_WIF_PROVIDER != '' && vars.GCP_TF_APPLY_SA != '' }}
+    environment:
+      name: ${{ inputs.env }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download plan artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ inputs.env }}
+          path: reports/
+
+      - name: Authenticate to GCP (OIDC) - APPLY SA
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_TF_APPLY_SA }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.5"
+
+      - name: Terraform init (remote state)
+        run: |
+          terraform -chdir=${{ inputs.stack }} init -reconfigure \
+            -backend-config=../../envs/gcp/${{ inputs.env }}/backend.hcl
+
+      - name: Terraform apply (from reviewed plan)
+        run: |
+          terraform -chdir=${{ inputs.stack }} apply -auto-approve -input=false \
+            ../../reports/tfplan
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## 🚀 Terraform Apply (GCP)"
+            echo ""
+            echo "- env: **${{ inputs.env }}** (requires Environment approval)"
+            echo "- stack: **${{ inputs.stack }}**"
+            echo "- approval note: **${{ inputs.approve_note }}**"
+            echo ""
+            echo "OIDC PLAN SA: **${{ vars.GCP_TF_PLAN_SA }}**"
+            echo "OIDC APPLY SA: **${{ vars.GCP_TF_APPLY_SA }}**"
+          } >> "$GITHUB_STEP_SUMMARY"
