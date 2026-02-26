@@ -3,8 +3,6 @@ package terraform.security
 # Baseline policies (minimal but enforceable) executed via Conftest on Terraform HCL2.
 # Intended goal: keep "secure-by-default" properties explicit and reviewable.
 
-default deny = []
-
 # Helper: true if any string literal contains substring s anywhere in parsed config.
 has_string_contains(s) {
   some path, v

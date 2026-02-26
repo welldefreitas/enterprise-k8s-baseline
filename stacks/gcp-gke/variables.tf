@@ -3,7 +3,7 @@ variable "project_id" {
   type        = string
 
   validation {
-    condition     = length(trim(var.project_id)) > 3
+    condition     = length(trimspace(var.project_id)) > 3
     error_message = "project_id must be a non-empty GCP project id."
   }
 }
