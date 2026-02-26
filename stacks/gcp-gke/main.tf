@@ -14,12 +14,11 @@ resource "terraform_data" "guardrails" {
 
   lifecycle {
     precondition {
-      condition = var.enable_private_endpoint || (!local.is_placeholder_allowlist && length(var.allowed_admin_cidrs) > 0)
+      condition     = var.enable_private_endpoint || (!local.is_placeholder_allowlist && length(var.allowed_admin_cidrs) > 0)
       error_message = "Security guardrail: when enable_private_endpoint=false (public control plane), set allowed_admin_cidrs to your office/VPN/bastion CIDRs (not the placeholder 0.0.0.0/32)."
     }
   }
 }
-
 
 module "network" {
   source              = "../../modules/gcp/network"
@@ -35,34 +34,34 @@ module "network" {
 }
 
 module "iam" {
-  source                         = "../../modules/gcp/iam"
+  source                          = "../../modules/gcp/iam"
   project_id                      = var.project_id
-  name                           = "${var.cluster_name}-nodes"
+  name                            = "${var.cluster_name}-nodes"
   enable_artifact_registry_reader = var.enable_artifact_registry_reader
   labels                          = var.labels
 }
 
 module "gke" {
-  source                   = "../../modules/gcp/gke"
-  project_id               = var.project_id
-  region                   = var.region
-  cluster_name             = var.cluster_name
+  source       = "../../modules/gcp/gke"
+  project_id   = var.project_id
+  region       = var.region
+  cluster_name = var.cluster_name
 
-  network_self_link        = module.network.network_self_link
-  subnet_self_link         = module.network.subnet_self_link
-  pods_range_name          = module.network.pods_range_name
-  services_range_name      = module.network.services_range_name
+  network_self_link   = module.network.network_self_link
+  subnet_self_link    = module.network.subnet_self_link
+  pods_range_name     = module.network.pods_range_name
+  services_range_name = module.network.services_range_name
 
-  node_service_account     = module.iam.node_service_account_email
-  allowed_admin_cidrs      = var.allowed_admin_cidrs
+  node_service_account = module.iam.node_service_account_email
+  allowed_admin_cidrs  = var.allowed_admin_cidrs
 
   private_nodes            = var.private_nodes
   enable_private_endpoint  = var.enable_private_endpoint
   enable_workload_identity = var.enable_workload_identity
-  deletion_protection     = var.deletion_protection
+  deletion_protection      = var.deletion_protection
 
-  node_count               = var.node_count
-  machine_type             = var.machine_type
+  node_count   = var.node_count
+  machine_type = var.machine_type
 
-  labels                   = var.labels
+  labels = var.labels
 }
