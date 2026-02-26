@@ -1,3 +1,26 @@
+locals {
+  # Placeholder allowlist used to satisfy static scanners without granting access.
+  # When control plane is public (enable_private_endpoint=false), you MUST set a real allowlist.
+  is_placeholder_allowlist = length(var.allowed_admin_cidrs) == 1 && var.allowed_admin_cidrs[0] == "0.0.0.0/32"
+}
+
+# Cross-variable security guardrail. Terraform variable validation cannot reference other variables,
+# so we enforce this using a precondition that runs at plan time.
+resource "terraform_data" "guardrails" {
+  input = {
+    enable_private_endpoint = var.enable_private_endpoint
+    allowed_admin_cidrs     = var.allowed_admin_cidrs
+  }
+
+  lifecycle {
+    precondition {
+      condition = var.enable_private_endpoint || (!local.is_placeholder_allowlist && length(var.allowed_admin_cidrs) > 0)
+      error_message = "Security guardrail: when enable_private_endpoint=false (public control plane), set allowed_admin_cidrs to your office/VPN/bastion CIDRs (not the placeholder 0.0.0.0/32)."
+    }
+  }
+}
+
+
 module "network" {
   source              = "../../modules/gcp/network"
   project_id          = var.project_id

@@ -45,10 +45,6 @@ resource "google_container_cluster" "this" {
     }
   }
 
-      }
-    }
-  }
-
   enable_shielded_nodes = true
 
   dynamic "workload_identity_config" {

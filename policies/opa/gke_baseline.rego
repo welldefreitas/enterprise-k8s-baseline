@@ -1,17 +1,16 @@
 package terraform.security
 
-# These policies are intentionally minimal and "baseline-enforcing".
-# They run against Terraform HCL2 configuration via Conftest:
-#   conftest test --parser hcl2 -p policies/opa .
+# Baseline policies (minimal but enforceable) executed via Conftest on Terraform HCL2.
+# Intended goal: keep "secure-by-default" properties explicit and reviewable.
 
 default deny = []
 
-# Helper: true if any string literal equals s anywhere in the parsed config.
-has_string(s) {
+# Helper: true if any string literal contains substring s anywhere in parsed config.
+has_string_contains(s) {
   some path, v
   walk(input, [path, v])
   is_string(v)
-  v == s
+  contains(v, s)
 }
 
 # Helper: ensure we can find 'issue_client_certificate = false' anywhere.
@@ -37,16 +36,16 @@ deny[msg] {
 
 deny[msg] {
   not has_disable_legacy_endpoints
-  msg := "Baseline: node metadata must disable legacy endpoints (metadata.disable-legacy-endpoints="true")."
+  msg := "Baseline: node metadata must disable legacy endpoints (metadata.disable-legacy-endpoints=\"true\")."
 }
 
-# Guardrail is enforced in Terraform via variable validation. This policy ensures the guardrail exists.
+# Guardrail is enforced via a Terraform precondition (cross-variable guardrail).
 deny[msg] {
-  not has_string("Security guardrail: when enable_private_endpoint=false (public control plane), you must set allowed_admin_cidrs.")
-  msg := "Baseline: missing guardrail validation for public control plane allowlist (allowed_admin_cidrs)."
+  not has_string_contains("Security guardrail: when enable_private_endpoint=false")
+  msg := "Baseline: missing guardrail enforcing allowlist when control plane is public (enable_private_endpoint=false)."
 }
 
 deny[msg] {
-  not has_string("Security guardrail: private_nodes must be true (no public node IPs).")
-  msg := "Baseline: missing guardrail validation enforcing private nodes (no public node IPs)."
+  not has_string_contains("Security guardrail: private_nodes must be true")
+  msg := "Baseline: missing guardrail enforcing private nodes (no public node IPs)."
 }
